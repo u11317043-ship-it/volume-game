@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>06｜音量控制與麥克風驅動器</title>
+<style>
+:root{font-family:system-ui,"Microsoft JhengHei",sans-serif;color:#203e46;background:#f4f2ec;line-height:1.65}*{box-sizing:border-box}body{margin:0}main{max-width:1350px;margin:auto;padding:24px}h1{font-size:clamp(25px,4vw,36px);margin:4px 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:18px 0 8px}p{margin:7px 0}.small,small{font-size:13px;color:#526b70}.eyebrow{font-size:12px;letter-spacing:.12em;color:#526b70}.layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start;margin-top:20px}.panel{background:white;border:1px solid #ccd9d4;border-radius:16px;padding:22px;min-width:0}.game{position:sticky;top:18px;overflow:hidden;border-radius:18px;border:1px solid #ccd9d4;background:#edf2ea;min-width:0}.game svg{display:block;width:100%;height:auto}.caption{background:white;padding:14px 18px;font-size:15px}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}button,select{font:inherit;border:1px solid #286a5c;border-radius:8px;padding:8px 12px}button{background:#286a5c;color:white;cursor:pointer}button.secondary,select{background:white;color:#203e46}select{width:100%}:focus-visible{outline:3px solid #a65d22;outline-offset:4px}label{display:block;font-size:14px;font-weight:bold;margin-top:13px}input[type=range]{width:100%;accent-color:#286a5c}output{float:right}input:disabled{opacity:.45}.reading{display:flex;align-items:center;justify-content:space-between}.reading strong{font-size:34px}.meter{height:22px;background:#e4ebe7;border-radius:5px;position:relative;margin:10px 0 6px}.fill{height:100%;width:0;background:#5f9885;border-radius:5px}.marker{position:absolute;top:-3px;height:28px;border-left:3px solid #344e70}.marker.loud{border-color:#a25732}.legend{display:flex;justify-content:space-between;font-size:12px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0}.stats div{padding:8px 10px;background:#edf3ef;border-radius:8px;font-size:12px}.stats strong{display:block;font-size:16px}.inputbox{padding:12px;background:#f0f4f0;border-radius:10px;margin:12px 0}.active-key{color:#286a5c;font-weight:bold}details{margin-top:18px}summary{font-weight:bold;cursor:pointer}li{margin:7px 0}.log{font-size:13px;min-height:40px;padding-left:20px}footer{margin-top:20px;font-size:13px;color:#526b70}body.play .debug-only{display:none!important}body.play .layout{grid-template-columns:1fr;margin-top:0}body.play .game{position:static;max-width:1100px;width:100%;margin:auto}body.play .game svg{max-height:85vh}[hidden]{display:none!important}@media(max-width:950px){.layout{grid-template-columns:1fr}.game{position:static}main{padding:18px 14px}}button:disabled{opacity:.45;cursor:not-allowed}
+kbd{background:#e4ebe7;border:1px solid #b0c2b9;border-radius:4px;padding:2px 6px;font-size:12px}
+</style></head><body><main>
+<header class="debug-only"><p class="eyebrow">互動教具 · 第四週 · 範例 06</p><h1>音量控制與麥克風驅動器</h1><p>可使用真實麥克風驅動，或是用滑桿、鍵盤模擬數字。隨時按 <kbd>Space</kbd> 切換除錯與遊戲模式。</p></header>
+<div class="layout"><section class="game" id="game" tabindex="0" aria-label="聲音模擬遊戲，鍵盤輸入時按住向上鍵提供浮力">
+<svg viewBox="0 0 1000 650" role="img" aria-label="旋轉方塊受到模擬音量支撐，突然增幅使它換色">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e3ede8"/><stop offset="1" stop-color="#f7f3e9"/></linearGradient></defs><rect width="1000" height="650" fill="url(#sky)"/><circle cx="840" cy="100" r="45" fill="#e7d8b4"/><path d="M0 520 Q200 440 390 510 T760 490 T1000 510 V650 H0Z" fill="#d8e4d8"/>
+<g class="debug-only"><line x1="500" x2="500" y1="30" y2="580" stroke="#89a697" stroke-dasharray="6 10"/><text x="25" y="45" fill="#526b70" font-size="19">音量訊號 → 聲音判斷 → 浮力／換色</text></g>
+<rect y="580" width="1000" height="70" fill="#c3cdbb"/><line x1="0" x2="1000" y1="580" y2="580" stroke="#6d8c75" stroke-width="4"/><ellipse id="shadow" cx="500" cy="583" rx="45" ry="9" fill="#3f6051" opacity=".18"/>
+<g id="cube" transform="translate(500 170)"><rect id="cubeColor" x="-38" y="-38" width="76" height="76" rx="7" fill="#397866"/><path d="M-18 12 L0 -16 L18 12 M0 -14 V22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text id="feedback" x="500" y="95" text-anchor="middle" font-size="25" fill="#2c5d50">按住 ↑，托住方塊</text><text id="sceneHint" x="500" y="623" text-anchor="middle" font-size="19" fill="#3e5c47">按住 ↑ 模擬發聲 · 放開恢復安靜</text></svg>
+<p class="caption" id="gameState">按空白鍵可切換模式。</p></section>
+<aside class="panel debug-only" id="debug"><h2>輸入設定</h2><label for="inputMode">輸入方式</label>
+<select id="inputMode">
+  <option value="keyboard" selected>鍵盤：按住 ↑ 發聲，放開變安靜</option>
+  <option value="mic">麥克風：真實聲音驅動（需許可權）</option>
+  <option value="slider">滑桿：手動指定持續音量</option>
+</select>
+<div class="inputbox"><label for="keyVolume">↑ 發聲時的音量 <output id="keyVolumeValue">65</output></label><input id="keyVolume" type="range" min="0" max="100" value="65"><p id="keyState" class="small">向上鍵尚未按下。</p>
+<label for="simVolume">滑桿模擬音量 <output id="simVolumeValue">0</output></label><input id="simVolume" type="range" min="0" max="100" value="0" disabled><small>鍵盤模式的平時音量是 0；滑桿模式則維持指定值。</small></div>
+<div class="buttons"><button id="pulse">短促一下（0.2 秒）</button><button id="silence" class="secondary">立刻安靜</button><button id="restart" class="secondary">重新遊玩</button></div><p class="small">短促按鈕使用「↑ 發聲時的音量」，模擬模式均可用。</p>
+<div class="reading"><span>目前輸入音量</span><span><strong id="raw">0</strong>／100</span></div><div class="meter" id="meter" role="meter" aria-label="模擬音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="fill" class="fill"></div><span class="marker" id="quietLine"></span><span class="marker loud" id="soundLine"></span></div><div class="legend"><span id="quietLegend"></span><span id="soundLegend"></span></div>
+<div class="stats"><div>發聲狀態<strong id="gateState">安靜</strong></div><div>平滑後音量<strong id="smooth">0</strong></div><div>短時間增幅<strong id="rise">0</strong></div><div>向上力量<strong id="force">0</strong></div><div>換色次數<strong id="count">0</strong></div><div>事件準備狀態<strong id="eventState">等待穩定</strong></div></div>
+<h2>互動參數</h2><label for="quiet">安靜門檻 <output id="quietValue"></output></label><input id="quiet" type="range" min="0" max="90" value="20"><label for="sound">發聲門檻 <output id="soundValue"></output></label><input id="sound" type="range" min="5" max="100" value="40">
+<label for="gravity">重力 <output id="gravityValue"></output></label><input id="gravity" type="range" min="30" max="350" step="10" value="120"><label for="lift">基本浮力 <output id="liftValue"></output></label><input id="lift" type="range" min="50" max="600" step="10" value="240"><label for="sensitivity">敏感度 <output id="sensitivityValue"></output></label><input id="sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1"><label for="burst">突然聲響增幅 <output id="burstValue"></output></label><input id="burst" type="range" min="5" max="40" value="12"><button id="defaults" class="secondary" style="margin-top:14px">還原互動參數</button>
+<h3>最近的換色事件</h3><ol class="log" id="log"><li>尚未觸發事件。</li></ol>
+<details><summary>操作說明與提示</summary><ol class="small"><li>**空白鍵 (Space)**：在任何時候按下均可快速切換「除錯模式」與「遊戲模式」。</li><li>**麥克風模式**：對著麥克風說話或拍手，當音量達到門檻時方塊會獲得浮力，突然大聲可觸發換色。</li><li>**鍵盤/滑桿模式**：用於無麥克風環境時的快速測試。</li></ol></details>
+</aside></div><footer class="debug-only">切換模式時自動管理麥克風及輸入狀態。重新整理頁面會回到預設值。</footer>
+<script>
+'use strict';
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+const defaults={quiet:20,sound:40,gravity:120,lift:240,sensitivity:1,burst:12};
+
+class VoiceControl{
+ constructor(){this.reset();}
+ reset(){this.sounding=false;this.smoothed=null;this.history=[];this.last=null;this.cooldown=-Infinity;this.burstReady=false;this.settledSince=null;}
+ tick(raw,t,p){
+  if(this.last!==null&&t-this.last>250)this.reset();
+  const dt=this.last===null?0:Math.max(0,(t-this.last)/1000);this.last=t;
+  this.smoothed=this.smoothed===null?raw:this.smoothed+(raw-this.smoothed)*(1-Math.exp(-dt/.065));
+  this.history.push({t,v:raw});while(this.history.length>1&&this.history[1].t<=t-100)this.history.shift();
+  const base=this.history[0],readyWindow=t-base.t>=80,rise=readyWindow?raw-base.v:0;
+  if(this.smoothed>=p.sound)this.sounding=true;else if(this.smoothed<p.quiet)this.sounding=false;
+  if(rise<p.burst*.3){if(this.settledSince===null)this.settledSince=t;if(t-this.settledSince>=150)this.burstReady=true;}else this.settledSince=null;
+  let event=false;if(readyWindow&&this.burstReady&&raw>=p.sound&&rise>=p.burst&&t-this.cooldown>=600){event=true;this.cooldown=t;this.burstReady=false;this.settledSince=null;}
+  const intensity=this.sounding?clamp((this.smoothed-p.quiet)/Math.max(5,p.sound-p.quiet),0,2):0;
+  return {volume:this.smoothed,rise,event,sounding:this.sounding,force:p.lift*p.sensitivity*intensity,eventState:t-this.cooldown<600?'冷卻中':this.burstReady?'等待突然增幅':'等待音量穩定'};
+ }
+}
+
+function physics(body,dt,force,p){
+ body.angle+=body.spin*dt;const angle=body.angle*Math.PI/180,extent=38*(Math.abs(Math.sin(angle))+Math.abs(Math.cos(angle)));
+ body.velocity=clamp((body.velocity+(force-p.gravity)*dt)*Math.exp(-.65*dt),-400,400);
+ body.height+=body.velocity*dt;
+ if(body.height<extent){body.height=extent;if(body.velocity<0)body.velocity=0;}
+ if(body.height>550-extent){body.height=550-extent;if(body.velocity>0)body.velocity=0;}
+ return extent;
+}
+
+const $=id=>document.getElementById(id),params={...defaults},voice=new VoiceControl();
+const colors=['#397866','#4b7796','#a16a40','#865e8b','#b15c62','#637d43'];
+const body={height:410,velocity:0,angle:0,spin:35};
+let held=false,pulseUntil=0,debug=true,lastFrame=null,lastUi=0,nextSpin=0,colorIndex=0,count=0,flashUntil=0;
+
+// 麥克風音訊控制變數
+let micStream = null, audioCtx = null, analyser = null, micDataArray = null;
+
+async function initMic(){
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('您的瀏覽器不支援麥克風存取！');
+      $('inputMode').value = 'keyboard';
+      updateInputModeUI();
+      return;
+    }
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.3;
+    source.connect(analyser);
+    micDataArray = new Uint8Array(analyser.fftSize);
+  } catch(err) {
+    alert('無法存取麥克風：' + err.message);
+    stopMic();
+    $('inputMode').value = 'keyboard';
+    updateInputModeUI();
+  }
+}
+
+function stopMic(){
+  if (micStream) {
+    micStream.getTracks().forEach(track => track.stop());
+    micStream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close().catch(()=>{});
+    audioCtx = null;
+  }
+  analyser = null;
+  micDataArray = null;
+}
+
+function getMicVolume(){
+  if (!analyser || !micDataArray) return 0;
+  analyser.getByteTimeDomainData(micDataArray);
+  let sumSq = 0;
+  for (let i = 0; i < micDataArray.length; i++) {
+    let v = (micDataArray[i] - 128) / 128;
+    sumSq += v * v;
+  }
+  let rms = Math.sqrt(sumSq / micDataArray.length);
+  // 將 RMS 音量放大映射至 0-100 區間
+  return clamp(rms * 350, 0, 100);
+}
+
+function inputLevel(t){
+  const mode = $('inputMode').value;
+  let base = 0;
+  if (mode === 'mic') {
+    base = getMicVolume();
+  } else if (mode === 'keyboard') {
+    base = held ? +$('keyVolume').value : 0;
+  } else if (mode === 'slider') {
+    base = +$('simVolume').value;
+  }
+  return t < pulseUntil ? Math.max(base, +$('keyVolume').value) : base;
+}
+
+function silence(){
+  held = false;
+  pulseUntil = 0;
+  $('simVolume').value = 0;
+  $('simVolumeValue').textContent = '0';
+}
+
+function updateInputModeUI() {
+  silence();
+  voice.reset();
+  const mode = $('inputMode').value;
+  if (mode === 'mic') {
+    initMic();
+    $('simVolume').disabled = true;
+    $('sceneHint').textContent = '請對麥克風發聲 · 聲音托起方塊';
+  } else {
+    stopMic();
+    $('simVolume').disabled = (mode === 'keyboard');
+    $('sceneHint').textContent = (mode === 'keyboard') ? '按住 ↑ 模擬發聲 · 放開恢復安靜' : '由滑桿維持模擬音量';
+  }
+}
+
+function configure(changed){
+  let q=+$('quiet').value,s=+$('sound').value;
+  if(s-q<5){if(changed==='sound')q=s-5;else s=q+5;}
+  $('quiet').value=q;$('sound').value=s;
+  for(const k of Object.keys(defaults)){
+    params[k]=+$(k).value;
+    $(k+'Value').textContent=k==='sensitivity'?params[k].toFixed(1)+' 倍':params[k];
+  }
+  $('quietLine').style.left=q+'%';
+  $('soundLine').style.left=s+'%';
+  $('quietLegend').textContent='安靜 '+q;
+  $('soundLegend').textContent='發聲 '+s;
+  if(['quiet','sound','burst'].includes(changed))voice.reset();
+}
+
+function changeColor(t){
+  colorIndex=(colorIndex+1+Math.floor(Math.random()*(colors.length-1)))%colors.length;
+  $('cubeColor').setAttribute('fill',colors[colorIndex]);
+  count++;
+  flashUntil=t+900;
+  if(count===1)$('log').replaceChildren();
+  const li=document.createElement('li');
+  const modeLabel = $('inputMode').value === 'mic' ? '麥克風' : '模擬';
+  li.textContent=new Date().toLocaleTimeString('zh-TW',{hour12:false})+' '+modeLabel+'突然聲響 → 換色';
+  $('log').prepend(li);
+  while($('log').children.length>5)$('log').lastElementChild.remove();
+}
+
+function frame(t){
+  const dt=lastFrame===null?0:clamp((t-lastFrame)/1000,0,.05);
+  lastFrame=t;
+  const raw=inputLevel(t),result=voice.tick(raw,t,params);
+  if(result.event)changeColor(t);
+  if(t>=nextSpin){
+    body.spin=(Math.random()<.5?-1:1)*(18+Math.random()*55);
+    nextSpin=t+1800+Math.random()*1800;
+  }
+  const extent=physics(body,dt,result.force,params);
+  $('cube').setAttribute('transform','translate(500 '+(580-body.height).toFixed(2)+') rotate('+body.angle.toFixed(2)+')');
+  $('shadow').setAttribute('rx',String(50-body.height/550*23));
+
+  const mode = $('inputMode').value;
+  $('feedback').textContent = t < flashUntil ? '突然增幅，換色！' :
+    result.sounding ? (mode === 'mic' ? '聲音正在托住方塊' : '模擬音量正在托住方塊') :
+    mode === 'mic' ? '對麥克風發聲，托住方塊' :
+    mode === 'keyboard' ? '按住 ↑，托住方塊' : '等待模擬音量';
+
+  $('gameState').textContent = body.height<=extent+.5?'方塊落地了':body.velocity>8?'方塊正在上升':body.velocity< -8?'方塊正在下降':'方塊暫時停在半空中';
+
+  if(debug&&t-lastUi>=80){
+    lastUi=t;
+    $('raw').textContent=Math.round(raw);
+    $('fill').style.width=raw+'%';
+    $('meter').setAttribute('aria-valuenow',String(Math.round(raw)));
+    $('smooth').textContent=result.volume.toFixed(1);
+    $('rise').textContent=result.rise.toFixed(1);
+    $('force').textContent=Math.round(result.force);
+    $('gateState').textContent=result.sounding?'發聲／浮力開啟':'安靜／浮力關閉';
+    $('count').textContent=count;
+    $('eventState').textContent=result.eventState;
+    $('keyState').textContent=mode === 'mic' ? '麥克風收音中' : (held?'↑ 按住中':'向上鍵尚未按下。');
+  }
+  requestAnimationFrame(frame);
+}
+
+function isTextInput(target){
+  if(!target || !(target instanceof Element)) return false;
+  const tag = target.tagName.toLowerCase();
+  return target.isContentEditable || tag==='textarea' || (tag==='input' && ['text','search','password','number'].includes(target.type));
+}
+
+$('game').addEventListener('click',()=>$('game').focus({preventScroll:true}));
+
+document.addEventListener('keydown',e=>{
+  if(e.isComposing||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey)return;
+
+  // 空白鍵切換除錯與遊戲模式
+  if(e.code==='Space'){
+    if(isTextInput(e.target)) return;
+    e.preventDefault();
+    if(e.repeat) return;
+    debug = !debug;
+    document.body.classList.toggle('play', !debug);
+    $('debug').hidden = !debug;
+    
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    $('game').focus({preventScroll:true});
+    return;
+  }
+
+  if(isTextInput(e.target) || e.target.closest('button, select, input')) return;
+
+  if(e.code==='ArrowUp' && $('inputMode').value==='keyboard'){
+    e.preventDefault();
+    held=true;
+  }
+});
+
+document.addEventListener('keyup',e=>{
+  if(e.code==='ArrowUp') held=false;
+});
+
+$('inputMode').addEventListener('change', updateInputModeUI);
+
+$('keyVolume').addEventListener('input',()=>{$('keyVolumeValue').textContent=$('keyVolume').value;});
+$('simVolume').addEventListener('input',()=>{$('simVolumeValue').textContent=$('simVolume').value;});
+
+$('pulse').addEventListener('click',()=>{pulseUntil=performance.now()+200;});
+$('silence').addEventListener('click',silence);
+
+for(const k of Object.keys(defaults))$(k).addEventListener('input',()=>configure(k));
+
+$('defaults').addEventListener('click',()=>{
+  for(const k of Object.keys(defaults))$(k).value=defaults[k];
+  configure('sound');
+});
+
+$('restart').addEventListener('click',()=>{
+  silence();
+  voice.reset();
+  body.height=410;
+  body.velocity=0;
+  body.angle=0;
+  count=0;
+  flashUntil=0;
+  $('log').replaceChildren();
+  const li=document.createElement('li');
+  li.textContent='尚未觸發事件。';
+  $('log').append(li);
+});
+
+window.addEventListener('blur',()=>{silence();voice.reset();});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    silence();
+    voice.reset();
+    lastFrame=null;
+  }
+});
+
+configure();
+requestAnimationFrame(frame);
+</script></main></body></html>
